@@ -1,7 +1,8 @@
 name: Release
 
-# Manual, deliberate releases only. Requires npm trusted publishing (OIDC) to be
-# configured for @martzmakes/stripe-events, or an NPM_TOKEN secret.
+# Manual, deliberate releases only. Publishes with npm trusted publishing
+# (OIDC): configure this repository + workflow as a trusted publisher for
+# @martzmakes/stripe-events on npmjs.com. No long-lived npm token is stored.
 on:
   workflow_dispatch:
 
@@ -12,6 +13,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: npm
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -19,8 +21,9 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run check
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

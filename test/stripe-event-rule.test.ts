@@ -109,6 +109,60 @@ describe("StripeEventRule", () => {
     });
   });
 
+  it("refuses an extraEventPattern that would widen the project filter", () => {
+    const { stack, fn } = makeStack();
+    const bus = new events.EventBus(stack, "Bus", { eventBusName: "test-bus" });
+    expect(
+      () =>
+        new StripeEventRule(stack, "Widen", {
+          bus,
+          partnerSourceName: PARTNER_SOURCE,
+          project: "proj-a",
+          eventTypes: [StripeEventType.CheckoutSessionCompleted],
+          handler: fn,
+          extraEventPattern: {
+            detail: { data: { object: { metadata: { project: ["proj-b"] } } } },
+          },
+        }),
+    ).toThrow(/metadata\.project/);
+    expect(
+      () =>
+        new StripeEventRule(stack, "Source", {
+          bus,
+          partnerSourceName: PARTNER_SOURCE,
+          project: "proj-a",
+          eventTypes: [StripeEventType.CheckoutSessionCompleted],
+          handler: fn,
+          extraEventPattern: { source: ["aws.partner/stripe.com/ed_other"] },
+        }),
+    ).toThrow(/source/);
+  });
+
+  it("validates project and eventTypes", () => {
+    const { stack, fn } = makeStack();
+    const bus = new events.EventBus(stack, "Bus", { eventBusName: "test-bus" });
+    expect(
+      () =>
+        new StripeEventRule(stack, "Empty", {
+          bus,
+          partnerSourceName: PARTNER_SOURCE,
+          project: " ",
+          eventTypes: ["checkout.session.completed"],
+          handler: fn,
+        }),
+    ).toThrow(/project/);
+    expect(
+      () =>
+        new StripeEventRule(stack, "NoTypes", {
+          bus,
+          partnerSourceName: PARTNER_SOURCE,
+          project: "proj-a",
+          eventTypes: [],
+          handler: fn,
+        }),
+    ).toThrow(/eventTypes/);
+  });
+
   it("throws when bus is supplied without partnerSourceName", () => {
     const { stack } = makeStack();
     const bus = new events.EventBus(stack, "Bus", { eventBusName: "test-bus" });

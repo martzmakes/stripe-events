@@ -7,7 +7,10 @@ import { Duration } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import type { StripeEventType } from "./event-types.js";
 import { defaultSsmPrefix, ssmParamName } from "./ssm-keys.js";
-import { StripeEventRule } from "./stripe-event-rule.js";
+import {
+  StripeEventRule,
+  assertProjectAndEventTypes,
+} from "./stripe-event-rule.js";
 
 /** Props for {@link StripeProjectConsumer}. */
 export interface StripeProjectConsumerProps {
@@ -30,8 +33,9 @@ export interface StripeProjectConsumerProps {
   readonly handler: lambda.IFunction;
 
   /**
-   * Grant the handler read/write access to the shared idempotency table and
-   * expose its name as an environment variable. Requires the ingestion stack
+   * Grant the handler `dynamodb:PutItem` on the shared idempotency table (the
+   * only action the runtime helper uses) and expose the table name as an
+   * environment variable. Requires the ingestion stack
    * to have created the table (the default).
    * @default true
    */
@@ -70,9 +74,10 @@ export interface StripeProjectConsumerProps {
  *
  * - a {@link StripeEventRule} on the ingestion bus, discovered from SSM, that
  *   matches only this project's `metadata.project` across the listed event types;
- * - the shared idempotency table imported from SSM, granted read/write to the
- *   handler, with its name exposed as `IDEMPOTENCY_TABLE` so the handler can use
- *   `StripeIdempotencyStore` from the `/runtime` entry point;
+ * - the shared idempotency table imported from SSM, with `dynamodb:PutItem`
+ *   granted to the handler (least privilege: the helper only ever writes
+ *   conditionally) and its name exposed as `IDEMPOTENCY_TABLE` so the handler
+ *   can use `StripeIdempotencyStore` from the `/runtime` entry point;
  * - optional dead-letter queue and retry policy on the Lambda target.
  *
  * The consuming stack never imports the root stack.
@@ -104,6 +109,7 @@ export class StripeProjectConsumer extends Construct {
   constructor(scope: Construct, id: string, props: StripeProjectConsumerProps) {
     super(scope, id);
 
+    assertProjectAndEventTypes("StripeProjectConsumer", props);
     const prefix = props.ssmPrefix ?? defaultSsmPrefix(props.envName);
 
     if (props.grantIdempotency ?? true) {
@@ -116,7 +122,7 @@ export class StripeProjectConsumer extends Construct {
         "IdempotencyTable",
         this.idempotencyTableName,
       );
-      this.idempotencyTable.grantReadWriteData(props.handler);
+      this.idempotencyTable.grant(props.handler, "dynamodb:PutItem");
 
       if (props.handler instanceof lambda.Function) {
         props.handler.addEnvironment(

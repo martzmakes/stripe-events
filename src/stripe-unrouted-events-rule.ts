@@ -72,6 +72,11 @@ export class StripeUnroutedEventsRule extends Construct {
   ) {
     super(scope, id);
 
+    if (props.eventTypes && !props.eventTypes.length) {
+      throw new Error(
+        "StripeUnroutedEventsRule: `eventTypes`, when given, must not be empty.",
+      );
+    }
     const { bus, partnerSourceName, busArn } = resolveBus(this, props);
     this.partnerSourceName = partnerSourceName;
 

@@ -27,4 +27,5 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run guard
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm publish --dry-run

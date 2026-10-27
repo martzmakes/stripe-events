@@ -123,6 +123,7 @@ export class StripeEventRule extends Construct {
   constructor(scope: Construct, id: string, props: StripeEventRuleProps) {
     super(scope, id);
 
+    assertProjectAndEventTypes("StripeEventRule", props);
     const { bus, partnerSourceName, busArn } = StripeEventRule.resolveBus(
       this,
       props,
@@ -247,16 +248,77 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** The `metadata.project` value must be a non-empty, non-whitespace string. */
+const PROJECT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+
+/**
+ * Validate the two inputs every routing construct depends on. An empty
+ * `eventTypes` array would synthesize `"detail-type": []`, which EventBridge
+ * rejects or which matches nothing; an empty or odd `project` would create a
+ * rule that silently never fires or that matches another project's tag.
+ * @internal
+ */
+export function assertProjectAndEventTypes(
+  who: string,
+  props: { project: string; eventTypes: readonly (StripeEventType | string)[] },
+): void {
+  if (!PROJECT_RE.test(props.project)) {
+    throw new Error(
+      `${who}: \`project\` must be 1-128 characters of letters, digits, ".", "_" or "-" (got ${JSON.stringify(props.project)}).`,
+    );
+  }
+  if (!props.eventTypes.length) {
+    throw new Error(
+      `${who}: \`eventTypes\` must list at least one event type.`,
+    );
+  }
+  for (const t of props.eventTypes) {
+    if (typeof t !== "string" || !t.trim()) {
+      throw new Error(
+        `${who}: every entry in \`eventTypes\` must be a non-empty string.`,
+      );
+    }
+  }
+}
+
 /**
  * Deep-merge an extra EventPattern into a base one: nested objects merge
  * recursively, while arrays and primitives from `extra` override the base. This
- * lets callers add constraints at new paths (e.g. another `detail` field)
- * without clobbering the generated `source` / `detail-type` / `project` filter.
+ * lets callers add constraints at new paths (e.g. another `detail` field).
+ *
+ * The three keys that make the generated rule *this project's* rule are
+ * protected: `source`, `detail-type`, and `detail.data.object.metadata.project`.
+ * An `extra` pattern that sets any of them throws, so a consumer cannot widen
+ * its subscription to another project's events by accident (or by a careless
+ * copy-paste). If you really need a different filter, build the rule yourself.
  */
 export function deepMergeEventPattern(
   base: events.EventPattern,
   extra: events.EventPattern,
 ): events.EventPattern {
+  const e = extra as Record<string, unknown>;
+  if ("source" in e) {
+    throw new Error(
+      "extraEventPattern must not set `source`; it is derived from the partner source name.",
+    );
+  }
+  if ("detailType" in e) {
+    throw new Error(
+      "extraEventPattern must not set `detailType`; use `eventTypes` instead.",
+    );
+  }
+  const metadata = (
+    (
+      (e.detail as Record<string, unknown> | undefined)?.data as
+        | Record<string, unknown>
+        | undefined
+    )?.object as Record<string, unknown> | undefined
+  )?.metadata as Record<string, unknown> | undefined;
+  if (metadata && "project" in metadata) {
+    throw new Error(
+      "extraEventPattern must not set `detail.data.object.metadata.project`; use `project` instead.",
+    );
+  }
   return deepMerge(
     base as Record<string, unknown>,
     extra as Record<string, unknown>,

@@ -109,6 +109,12 @@ describe("withProject", () => {
     ).toEqual({ metadata: { email: "a@b.com", project: "project-b" } });
   });
 
+  it("rejects an empty or malformed project tag", () => {
+    expect(() => withProject({}, "")).toThrow(/project/);
+    expect(() => withProject({}, "has space")).toThrow(/project/);
+    expect(() => withProject({}, "-leading")).toThrow(/project/);
+  });
+
   it("overrides an existing project tag", () => {
     expect(withProject({ metadata: { project: "old" } }, "new")).toEqual({
       metadata: { project: "new" },

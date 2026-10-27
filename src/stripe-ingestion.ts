@@ -193,8 +193,10 @@ export class StripeIngestion extends Construct {
   }
 
   /**
-   * Grant a principal (typically a consumer's handler Lambda) read/write access
-   * to the idempotency table. Throws if the table was disabled.
+   * Grant a principal (typically a consumer's handler Lambda) the single action
+   * the idempotency helper needs: a conditional `PutItem`. Nothing else on the
+   * table is granted; it holds only event ids, and a consumer never needs to
+   * read or delete them. Throws if the table was disabled.
    */
   public grantIdempotency(grantee: IGrantable): Grant {
     if (!this.idempotencyTable) {
@@ -203,6 +205,6 @@ export class StripeIngestion extends Construct {
           "`idempotency.enabled` (default true) to use this.",
       );
     }
-    return this.idempotencyTable.grantReadWriteData(grantee);
+    return this.idempotencyTable.grant(grantee, "dynamodb:PutItem");
   }
 }

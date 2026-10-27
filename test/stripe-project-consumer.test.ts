@@ -54,17 +54,17 @@ describe("StripeProjectConsumer", () => {
     );
   });
 
-  it("grants the handler read/write on the idempotency table and sets IDEMPOTENCY_TABLE", () => {
+  it("grants the handler only dynamodb:PutItem on the idempotency table and sets IDEMPOTENCY_TABLE", () => {
     const { template, consumer } = fixture();
     expect(consumer.idempotencyTable).toBeDefined();
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: Match.objectLike({
-        Statement: Match.arrayWith([
+        Statement: [
           Match.objectLike({
-            Action: Match.arrayWith(["dynamodb:PutItem"]),
+            Action: "dynamodb:PutItem",
             Effect: "Allow",
           }),
-        ]),
+        ],
       }),
     });
     template.hasResourceProperties("AWS::Lambda::Function", {
@@ -72,6 +72,33 @@ describe("StripeProjectConsumer", () => {
         Variables: Match.objectLike({ IDEMPOTENCY_TABLE: Match.anyValue() }),
       },
     });
+  });
+
+  it("rejects an empty project or an empty event-type list", () => {
+    const stack = new Stack(new App(), "V");
+    const handler = new lambda.Function(stack, "H", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => {};"),
+    });
+    expect(
+      () =>
+        new StripeProjectConsumer(stack, "A", {
+          envName: "live",
+          project: "",
+          eventTypes: ["checkout.session.completed"],
+          handler,
+        }),
+    ).toThrow(/project/);
+    expect(
+      () =>
+        new StripeProjectConsumer(stack, "B", {
+          envName: "live",
+          project: "ok",
+          eventTypes: [],
+          handler,
+        }),
+    ).toThrow(/eventTypes/);
   });
 
   it("skips the table when grantIdempotency is false", () => {
