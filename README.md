@@ -119,8 +119,55 @@ StripeEventRule.fromSsm(this, "Subscription", {
 });
 ```
 
-See [`examples/`](./examples) for a complete root stack and a consumer stack
-that also imports and grants the idempotency table.
+See [`examples/`](./examples) for a complete root stack and a consumer stack.
+
+### One construct per consuming project
+
+`StripeProjectConsumer` bundles what every consumer repeats by hand: the
+SSM-discovered rule for its `metadata.project`, the shared idempotency table
+imported and granted to the handler (with its name exposed as
+`IDEMPOTENCY_TABLE`), and an optional dead-letter queue and retry policy on the
+Lambda target.
+
+```ts
+import {
+  StripeProjectConsumer,
+  StripeEventType,
+} from "@martzmakes/stripe-events";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+
+new StripeProjectConsumer(this, "Stripe", {
+  envName: "live",
+  project: "project-a",
+  eventTypes: [
+    StripeEventType.CheckoutSessionCompleted,
+    StripeEventType.CustomerSubscriptionDeleted,
+  ],
+  handler: billingFn,
+  deadLetterQueue: new sqs.Queue(this, "StripeDlq"),
+  retryAttempts: 5,
+});
+```
+
+### Catch what no project rule can match
+
+An object created without `metadata.project` matches no project rule and is
+silently dropped. Deploy one `StripeUnroutedEventsRule` per ingestion bus so
+those events land somewhere visible:
+
+```ts
+import { StripeUnroutedEventsRule } from "@martzmakes/stripe-events";
+
+StripeUnroutedEventsRule.fromSsm(this, "Unrouted", {
+  envName: "live",
+  queue: new sqs.Queue(this, "StripeUnrouted", {
+    retentionPeriod: Duration.days(14),
+  }),
+});
+```
+
+A message on that queue means some code path created a Stripe object without
+`withProject(...)`.
 
 ## Handler idempotency
 
@@ -162,8 +209,7 @@ An object created without `metadata.project` will not match any `StripeEventRule
   bus, pass **both** `RuleName` and `EventBusName`. A query with `RuleName` alone
   returns no data points and looks like zero traffic.
 - **Mis-tagged events are invisible to every project rule.** An object created
-  without `metadata.project` only matches a catch-all rule. Add one (for example,
-  an archive rule or a dead-letter target) so you can see them.
+  without `metadata.project` only matches `StripeUnroutedEventsRule`. Deploy it.
 - **The archive has a retention window.** With the 90-day default, old events age
   out of the archive even though they were delivered.
 

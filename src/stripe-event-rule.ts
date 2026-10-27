@@ -1,6 +1,8 @@
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import { Duration } from "aws-cdk-lib";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
 import type { StripeEventType } from "./event-types.js";
@@ -49,6 +51,19 @@ export interface StripeEventRuleProps {
 
   /** A Lambda to invoke; wrapped in a `LambdaFunction` target for you. */
   readonly handler?: lambda.IFunction;
+
+  /**
+   * Dead-letter queue for the Lambda target: events EventBridge could not
+   * deliver after `retryAttempts` land here instead of being lost. Only applies
+   * when `handler` is supplied.
+   */
+  readonly deadLetterQueue?: sqs.IQueue;
+
+  /** Delivery retries before dead-lettering (Lambda target only). @default EventBridge default (185) */
+  readonly retryAttempts?: number;
+
+  /** Maximum event age to keep retrying (Lambda target only). @default EventBridge default (24h) */
+  readonly maxEventAge?: Duration;
 
   /** Optional extra EventPattern, deep-merged into the generated pattern. */
   readonly extraEventPattern?: events.EventPattern;
@@ -215,7 +230,15 @@ export class StripeEventRule extends Construct {
       );
     }
     if (props.target) return [props.target];
-    if (props.handler) return [new targets.LambdaFunction(props.handler)];
+    if (props.handler) {
+      return [
+        new targets.LambdaFunction(props.handler, {
+          deadLetterQueue: props.deadLetterQueue,
+          retryAttempts: props.retryAttempts,
+          maxEventAge: props.maxEventAge,
+        }),
+      ];
+    }
     return undefined;
   }
 }

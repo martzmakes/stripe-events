@@ -24,6 +24,16 @@ export {
   type StripeEventRuleSsmLookup,
 } from "./stripe-event-rule.js";
 
+export {
+  StripeProjectConsumer,
+  type StripeProjectConsumerProps,
+} from "./stripe-project-consumer.js";
+
+export {
+  StripeUnroutedEventsRule,
+  type StripeUnroutedEventsRuleProps,
+} from "./stripe-unrouted-events-rule.js";
+
 export { StripeEventType } from "./event-types.js";
 
 export {

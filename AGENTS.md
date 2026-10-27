@@ -5,7 +5,9 @@ humans and coding agents working in this repository.
 
 ## Layout
 
-- `src/` constructs: `StripeIngestion`, `StripeEventRule`, `StripeEventType`,
+- `src/` constructs: `StripeIngestion` (root), `StripeEventRule` (one project's
+  rule), `StripeProjectConsumer` (rule + idempotency grant + DLQ for a project),
+  `StripeUnroutedEventsRule` (catch-all for untagged events), `StripeEventType`,
   SSM key helpers. Peers: `aws-cdk-lib`, `constructs`.
 - `src/runtime/` Lambda helpers: `StripeIdempotencyStore`, `withProject`.
   Depends only on `@aws-sdk/client-dynamodb`. Never import `aws-cdk-lib` here.

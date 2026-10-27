@@ -3,4 +3,5 @@
 ---
 
 First public release: `StripeIngestion`, `StripeEventRule`, `StripeEventType`,
-SSM discovery helpers, and the `/runtime` idempotency helper.
+`StripeProjectConsumer`, `StripeUnroutedEventsRule`, SSM discovery helpers, and
+the `/runtime` idempotency helper.
