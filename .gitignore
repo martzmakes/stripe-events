@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# test / coverage
+coverage/
+
+# CDK
+cdk.out/
+**/cdk.out/
+cdk.out-local/
+.cdk.staging/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+.cmux-state.json
+
+# env
+.env
+.env.*
+!.env.example
+
+# never commit deployment outputs
+cdk-outputs.json

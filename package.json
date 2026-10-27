@@ -1,0 +1,89 @@
+{
+  "name": "@martzmakes/stripe-events",
+  "version": "0.1.0",
+  "description": "AWS CDK (v2) constructs to fan one Stripe account's events out to many independent projects via Amazon EventBridge, routed by metadata.project — plus a Lambda-side idempotency helper.",
+  "keywords": [
+    "aws",
+    "cdk",
+    "stripe",
+    "eventbridge",
+    "events",
+    "serverless",
+    "idempotency",
+    "webhook"
+  ],
+  "license": "Apache-2.0",
+  "author": "Matt Martz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/martzmakes/stripe-events.git"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js",
+      "require": "./dist/runtime/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "release": "changeset publish",
+    "guard": "node scripts/check-repository.mjs",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test && npm run build && npm run guard"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2",
+    "constructs": "^10"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "aws-cdk-lib": "^2.150.0",
+    "aws-sdk-client-mock": "^4.0.0",
+    "constructs": "^10.3.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "tsup": "^8.2.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "homepage": "https://github.com/martzmakes/stripe-events#readme",
+  "bugs": {
+    "url": "https://github.com/martzmakes/stripe-events/issues"
+  }
+}

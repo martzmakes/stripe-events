@@ -1,0 +1,7 @@
+dist
+node_modules
+coverage
+**/cdk.out
+pnpm-lock.yaml
+package-lock.json
+CHANGELOG.md
