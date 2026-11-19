@@ -68,28 +68,28 @@
   },
   "peerDependencies": {
     "aws-cdk-lib": "^2.247.0",
-    "constructs": "^10.5.0"
+    "constructs": "^10.8.1"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1172.0"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.0",
-    "@eslint/js": "^9.0.0",
-    "@types/node": "^22.20.5",
+    "@changesets/cli": "^3.0.3",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
     "aws-cdk": "^2.1148.1",
-    "aws-cdk-lib": "^2.275.0",
+    "aws-cdk-lib": "^2.277.0",
     "aws-sdk-client-mock": "^4.0.0",
-    "constructs": "^10.5.0",
+    "constructs": "^10.8.1",
     "esbuild": "^0.28.2",
-    "eslint": "^9.0.0",
-    "prettier": "^3.3.0",
+    "eslint": "^10.15.0",
+    "prettier": "^3.10.1",
     "tsup": "^9.0.0",
-    "tsx": "^4.16.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.73.0",
-    "vite": "^7.3.7",
-    "vitest": "^5.0.5"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
   },
   "publishConfig": {
     "access": "public",
