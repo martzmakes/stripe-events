@@ -15,22 +15,13 @@ interface StripeEventBridgeEvent {
   "detail-type": string;
   detail: {
     id: string;
-    type: string;
-    data: { object: Record<string, unknown> };
   };
 }
 
 export const handler = async (event: StripeEventBridgeEvent): Promise<void> => {
-  const stripeEvent = event.detail;
-
-  // at-least-once delivery → dedupe on Stripe's event.id
-  await store.process(stripeEvent.id, async () => {
-    const object = stripeEvent.data.object;
-    // metadata.project is guaranteed to be ours — the rule already filtered.
-    console.log("processing", event["detail-type"], stripeEvent.id, {
-      project: (object.metadata as Record<string, string> | undefined)?.project,
-    });
-
-    // ... your side effects here (grant entitlement, update DB, etc.) ...
+  // This example records receipt only. Put retryable billing work behind a
+  // business-level idempotency key or a durable, retry-aware processing step.
+  await store.process(event.detail.id, async () => {
+    console.log("Received Stripe event", event["detail-type"], event.detail.id);
   });
 };

@@ -44,8 +44,8 @@ export interface StripeUnroutedEventsRuleProps {
  * is the bus archive.
  *
  * Deploy one per ingestion bus, pointed at an SQS queue (or a Lambda that
- * alerts). Seeing a message here means some code path created a Stripe object
- * without `withProject(...)`.
+ * alerts). Filter `eventTypes` when only some object types should carry a tag.
+ * A present but unknown project tag falls outside this rule.
  *
  * @example
  * ```ts

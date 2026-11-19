@@ -72,6 +72,19 @@ describe("StripeIdempotencyStore", () => {
     expect(fn).toHaveBeenCalledTimes(1); // not called again
   });
 
+  it("skips redelivery when a callback fails after the key is claimed", async () => {
+    const store = new StripeIdempotencyStore({ tableName: "t" });
+    const fn = vi.fn().mockRejectedValue(new Error("side effect failed"));
+    ddbMock.on(PutItemCommand).resolvesOnce({});
+    await expect(store.process("evt_1", fn)).rejects.toThrow(
+      "side effect failed",
+    );
+
+    ddbMock.on(PutItemCommand).rejects(new ConditionalCheckFailedException());
+    await expect(store.process("evt_1", fn)).resolves.toBeUndefined();
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it("requires tableName and eventId", async () => {
     expect(() => new StripeIdempotencyStore({ tableName: "" })).toThrow(
       /tableName/,

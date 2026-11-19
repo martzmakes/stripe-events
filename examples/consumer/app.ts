@@ -17,13 +17,12 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import {
   StripeProjectConsumer,
   StripeEventType,
-  StripeUnroutedEventsRule,
 } from "@martzmakes/stripe-events";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const ENV_NAME = "live";
-const PROJECT = "my-project"; // the metadata.project tag your app stamps
+const envName = process.env.STRIPE_ENV_NAME ?? "test";
+const project = process.env.STRIPE_PROJECT ?? "project-a";
 
 const app = new App();
 const stack = new Stack(app, "MyProjectStripeStack", {
@@ -35,28 +34,21 @@ const stack = new Stack(app, "MyProjectStripeStack", {
 
 const handler = new NodejsFunction(stack, "StripeHandler", {
   entry: path.join(__dirname, "handler.ts"),
-  runtime: Runtime.NODEJS_20_X,
+  runtime: Runtime.NODEJS_22_X,
+  bundling: { bundleAwsSDK: true },
 });
 
 // Subscribe to just this project's events. IDEMPOTENCY_TABLE is set on the
-// handler and read/write access is granted for you.
+// handler and dynamodb:PutItem access is granted for you.
 new StripeProjectConsumer(stack, "Stripe", {
-  envName: ENV_NAME,
-  project: PROJECT,
+  envName,
+  project,
   eventTypes: [
     StripeEventType.CheckoutSessionCompleted,
     StripeEventType.CustomerSubscriptionDeleted,
   ],
   handler,
   deadLetterQueue: new sqs.Queue(stack, "StripeDlq", {
-    retentionPeriod: Duration.days(14),
-  }),
-});
-
-// One per bus, usually in the root stack: events with no metadata.project tag.
-StripeUnroutedEventsRule.fromSsm(stack, "Unrouted", {
-  envName: ENV_NAME,
-  queue: new sqs.Queue(stack, "StripeUnrouted", {
     retentionPeriod: Duration.days(14),
   }),
 });

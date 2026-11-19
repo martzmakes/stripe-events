@@ -2,9 +2,9 @@
  * `@martzmakes/stripe-events/runtime` — Lambda-side helpers for consuming Stripe events
  * delivered via Amazon EventBridge.
  *
- * EventBridge delivery is **at-least-once**, so every handler must dedupe on
- * Stripe's `event.id`. {@link StripeIdempotencyStore} wraps a single conditional
- * DynamoDB write to do exactly that, safely under concurrency.
+ * EventBridge delivery is **at-least-once**. {@link StripeIdempotencyStore}
+ * can claim Stripe's `event.id` with one conditional DynamoDB write to suppress
+ * duplicate attempts, including concurrent ones.
  *
  * This entry point depends only on `@aws-sdk/client-dynamodb` — never on
  * `aws-cdk-lib` — so importing it into a Lambda bundle stays lean.
@@ -35,6 +35,9 @@ export interface StripeIdempotencyStoreOptions {
  * and a `ttl` time-to-live attribute (exactly the table {@link StripeIngestion}
  * provisions).
  *
+ * This helper records a claim before any work begins. Use business-level
+ * idempotency for changes that need to retry after a failure.
+ *
  * @example
  * ```ts
  * const store = new StripeIdempotencyStore({ tableName: process.env.TABLE! });
@@ -42,7 +45,7 @@ export interface StripeIdempotencyStoreOptions {
  * export const handler = async (event: EventBridgeEvent<string, any>) => {
  *   const stripeEventId = event.detail.id;
  *   await store.process(stripeEventId, async () => {
- *     // ... your side effects, run at most once per Stripe event.id ...
+ *     console.info("Received Stripe event", stripeEventId);
  *   });
  * };
  * ```
@@ -71,7 +74,7 @@ export class StripeIdempotencyStore {
    * Atomically claim an `eventId`.
    *
    * @returns `true` if this is the first time the id was seen (the caller
-   * **should** process it), or `false` if it was already processed (the caller
+   * **should** process it), or `false` if it was already claimed (the caller
    * **should** skip). Relies on a conditional `PutItem` — safe under concurrent
    * redeliveries, no read-then-write race.
    */
@@ -101,14 +104,13 @@ export class StripeIdempotencyStore {
   }
 
   /**
-   * Run `fn` at most once per `eventId`. Returns `fn`'s result on first sight,
-   * or `undefined` if the event was already processed.
+   * Run `fn` at most once per key while its marker persists. Returns `fn`'s
+   * result on first sight, or `undefined` if the key was already claimed.
    *
    * Note: the marker is written *before* `fn` runs, so if `fn` throws the event
-   * is still recorded as seen. For most webhook side effects (which should be
-   * idempotent on their own) this at-most-once-attempt behavior is the safer
-   * default; if you need retry-on-failure, call {@link markProcessed} yourself
-   * and order the write to suit.
+   * is still recorded as seen. Use a retry-aware operation for durable work,
+   * for example an idempotency marker written in the same transaction as the
+   * business update.
    */
   async process<T>(
     eventId: string,

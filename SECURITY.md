@@ -18,8 +18,8 @@ ask otherwise.
 
 - This package creates infrastructure in your AWS account. Review the synthesized
   template before deploying, as you would for any construct.
-- The idempotency helper writes to a DynamoDB table you own. It stores only the
-  Stripe `event.id` and a TTL; no event payload is persisted by this library.
+- The idempotency helper writes the configured event key and a TTL to a DynamoDB
+  table you own.
 - Stripe delivers events to the partner bus directly; this library never handles
   Stripe secrets or webhook signing keys.
 
@@ -30,16 +30,15 @@ ask otherwise.
   90 days (`archiveRetention`; set `enableArchive: false` to skip it). Give
   dead-letter and unrouted queues a retention you are comfortable with and keep
   SQS server-side encryption on (it is on by default for new queues).
-- **The idempotency table stores only `eventId` and a TTL.** No payload is
-  persisted by this library.
+- **The idempotency table stores only `eventId` and a TTL.** Use a Stripe event
+  ID or a non-sensitive consumer-prefixed event ID as the key.
 - **IAM is least privilege by default.** `StripeProjectConsumer` and
   `StripeIngestion.grantIdempotency` grant exactly `dynamodb:PutItem`; the
   runtime helper never reads, updates or deletes.
-- **A consumer cannot widen its own filter.** `extraEventPattern` rejects any
-  attempt to set `source`, `detail-type` or `metadata.project`, so one project's
-  stack cannot subscribe to another project's events by accident. Within one
-  AWS account that boundary is a convenience, not a security control: anyone who
-  can deploy to the account can read the bus.
+- **Project filters help prevent accidental cross-project delivery.**
+  `extraEventPattern` preserves the generated source, event type, and project
+  filters. Principals with permission to create rules or inspect the shared bus
+  can access other projects' events. Use IAM and account boundaries for isolation.
 - **SSM parameters are plain `String`.** They hold the bus ARN, bus name, partner
   source name and table name, none of which is a secret.
 - **No webhook secrets exist.** Delivery is Stripe's native EventBridge

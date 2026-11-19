@@ -262,7 +262,7 @@ export function assertProjectAndEventTypes(
   who: string,
   props: { project: string; eventTypes: readonly (StripeEventType | string)[] },
 ): void {
-  if (!PROJECT_RE.test(props.project)) {
+  if (typeof props.project !== "string" || !PROJECT_RE.test(props.project)) {
     throw new Error(
       `${who}: \`project\` must be 1-128 characters of letters, digits, ".", "_" or "-" (got ${JSON.stringify(props.project)}).`,
     );
@@ -302,19 +302,20 @@ export function deepMergeEventPattern(
       "extraEventPattern must not set `source`; it is derived from the partner source name.",
     );
   }
-  if ("detailType" in e) {
+  if ("detailType" in e || "detail-type" in e) {
     throw new Error(
       "extraEventPattern must not set `detailType`; use `eventTypes` instead.",
     );
   }
-  const metadata = (
-    (
-      (e.detail as Record<string, unknown> | undefined)?.data as
-        | Record<string, unknown>
-        | undefined
-    )?.object as Record<string, unknown> | undefined
-  )?.metadata as Record<string, unknown> | undefined;
-  if (metadata && "project" in metadata) {
+  if (
+    overridesProjectFilter(e, [
+      "detail",
+      "data",
+      "object",
+      "metadata",
+      "project",
+    ])
+  ) {
     throw new Error(
       "extraEventPattern must not set `detail.data.object.metadata.project`; use `project` instead.",
     );
@@ -323,6 +324,25 @@ export function deepMergeEventPattern(
     base as Record<string, unknown>,
     extra as Record<string, unknown>,
   ) as events.EventPattern;
+}
+
+function overridesProjectFilter(
+  pattern: Record<string, unknown>,
+  path: readonly string[],
+): boolean {
+  return Object.entries(pattern).some(([key, value]) => {
+    // EventBridge joins nested keys with dots. Check dotted spellings as well.
+    const segments = key.split(".");
+    const sharedLength = Math.min(segments.length, path.length);
+    if (segments.slice(0, sharedLength).some((part, i) => part !== path[i])) {
+      return false;
+    }
+    return (
+      segments.length >= path.length ||
+      !isPlainObject(value) ||
+      overridesProjectFilter(value, path.slice(segments.length))
+    );
+  });
 }
 
 function deepMerge(

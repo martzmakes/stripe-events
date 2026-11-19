@@ -46,3 +46,37 @@ AI tools are fine to use. The rules that apply to them:
 2. Fork, branch, make the change with tests, run `npm run check`.
 3. Open a pull request with the DCO sign-off and a changeset.
 4. Review happens in a weekly triage slot. There is no response-time promise.
+
+## Releasing
+
+Prepare the version and changelog with `npm exec -- changeset version` when
+releasing queued changesets, then run `npm install --package-lock-only` to sync
+the lockfile. Version `0.1.0` is already set in the initial release.
+
+From the repository root, use Node.js 22 or 24 and verify the release locally.
+
+```sh
+npm ci
+npm run check
+npm run synth:examples
+npm audit --omit=dev
+npm pack --dry-run
+```
+
+The tarball should contain `dist/`, `package.json`, `README.md`, `LICENSE`, and
+`NOTICE`. Review the Git history before making the repository public.
+
+For a brand-new npm package, the package settings for trusted publishing become
+available after package creation. From a reviewed checkout of the public source,
+build and pack the release with `npm pack`. An npm maintainer with access to the
+`@martzmakes` scope can publish the reviewed tarball interactively with
+`npm publish ./martzmakes-stripe-events-0.1.0.tgz --access public --no-provenance`
+and the account's 2FA prompt. This first local publication has no CI provenance
+attestation. [Scoped public packages](https://docs.npmjs.com/creating-and-publishing-scoped-public-packages/)
+
+For later versions, register `martzmakes/stripe-events` as a GitHub Actions
+trusted publisher in the npm package settings. Use workflow filename
+`release.yml`, GitHub environment `npm`, and allow direct `npm publish`. Once
+the version and changelog are on `main`, dispatch the Release workflow from
+`main`. It builds and publishes with provenance from the public repository.
+[npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)

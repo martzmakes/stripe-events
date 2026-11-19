@@ -3,7 +3,11 @@ import { Match, Template } from "aws-cdk-lib/assertions";
 import * as events from "aws-cdk-lib/aws-events";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { describe, expect, it } from "vitest";
-import { StripeEventRule, StripeEventType } from "../src/index.js";
+import {
+  deepMergeEventPattern,
+  StripeEventRule,
+  StripeEventType,
+} from "../src/index.js";
 
 const PARTNER_SOURCE = "aws.partner/stripe.com/ed_test123";
 
@@ -161,6 +165,18 @@ describe("StripeEventRule", () => {
           handler: fn,
         }),
     ).toThrow(/eventTypes/);
+  });
+
+  it.each([
+    { detail: { data: { object: { metadata: [{ exists: true }] } } } },
+    { detail: { "data.object.metadata.project": ["proj-b"] } },
+  ])("rejects a replacement for the generated project predicate", (extra) => {
+    const base = {
+      detail: { data: { object: { metadata: { project: ["proj-a"] } } } },
+    };
+    expect(() => deepMergeEventPattern(base, extra)).toThrow(
+      /metadata\.project/,
+    );
   });
 
   it("throws when bus is supplied without partnerSourceName", () => {

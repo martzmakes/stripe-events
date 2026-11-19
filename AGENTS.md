@@ -12,8 +12,8 @@ humans and coding agents working in this repository.
 - `src/runtime/` Lambda helpers: `StripeIdempotencyStore`, `withProject`.
   Depends only on `@aws-sdk/client-dynamodb`. Never import `aws-cdk-lib` here.
 - `test/` vitest with CDK `assertions` and `aws-sdk-client-mock`.
-- `examples/` illustrative root and consumer stacks, typechecked via tsconfig
-  `paths`, not deployed in CI.
+- `examples/` root and consumer stacks. CI typechecks and synthesizes both using
+  local dependencies.
 - `scripts/check-repository.mjs` repository guard; runs in `npm run check` and CI.
 
 ## Gotchas
@@ -29,7 +29,8 @@ humans and coding agents working in this repository.
 
 ```sh
 npm run check
-npm publish --dry-run   # confirm the tarball holds only dist, README, LICENSE, NOTICE
+npm run synth:examples
+npm pack --dry-run   # confirm the tarball holds only dist, README, LICENSE, NOTICE and package.json
 ```
 
 ## Never commit
